@@ -15,7 +15,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='dcos_marathon',
-    version='1.0.2',
+    version='1.0.3',
     description='A DCOS Marathon API Client',
     long_description=long_description,
     url='https://github.com/cpdevws/dcos_marathon',
@@ -35,6 +35,8 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5'
     ],
-    packages=find_packages(exclude=['contrib', 'docs', 'tests']),
+    #packages=find_packages(exclude=['contrib', 'docs', 'tests']),
+    packages=[''],
+    package_dir={'': 'dcos_marathon'},
     install_requires=['marathon', 'jsonschema']
 )
