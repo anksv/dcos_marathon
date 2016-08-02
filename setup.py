@@ -15,7 +15,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='dcos_marathon',
-    version='1.0.1',
+    version='1.0.2',
     description='A DCOS Marathon API Client',
     long_description=long_description,
     url='https://github.com/cpdevws/dcos_marathon',
