@@ -2,6 +2,8 @@
 
 import marathon
 import requests
+import json
+from jsonschema import validate
 from marathon import MarathonClient
 from marathon.models import MarathonApp, MarathonDeployment, MarathonGroup, MarathonInfo, MarathonTask, MarathonEndpoint, MarathonQueueItem
 from marathon.exceptions import InternalServerError, NotFoundError, MarathonHttpError, MarathonError
@@ -9,9 +11,9 @@ from marathon.models.events import EventFactory
 
 class DcosMarathon(MarathonClient):
 
-    def _is_reachable(self, url):
+    def _is_reachable(self):
         try:
-            response = requests.get(url)
+            response = requests.get(self.marathon_url)
             response.raise_for_status()
             return True
         except requests.exceptions.HTTPError as err:
@@ -38,7 +40,7 @@ class DcosMarathon(MarathonClient):
         super(DcosMarathon, self).__init__(self.marathon_url, username=username, password=password, timeout=timeout)
         self.url, self.user, self.password, self.dcos = url, username, password, dcos
         self.auth_token = None
-        self.can_connect, self.auth_token = self._is_reachable(self.marathon_url), self._token(force_new=True)
+        self.can_connect, self.auth_token = self._is_reachable(), self._token(force_new=True)
 
     def __str__(self):
         mode, status = "dcos", "unknown"
@@ -53,6 +55,7 @@ class DcosMarathon(MarathonClient):
 
         return "url: %s, mode: %s, status: %s" % (self.marathon_url, mode, status)
 
+    # Reusing code from thefactory/marathon-python and setting DCOS authorization token
     def _do_request(self, method, path, params=None, data=None):
         """Query Marathon server."""
         headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
@@ -97,6 +100,7 @@ class DcosMarathon(MarathonClient):
 
         return response
 
+    # Reusing code from thefactory/marathon-python and setting DCOS authorization token
     def _do_sse_request(self, path, params=None, data=None):
         from sseclient import SSEClient
 
@@ -119,3 +123,30 @@ class DcosMarathon(MarathonClient):
             raise MarathonError('No remaining Marathon servers to try')
 
         return messages
+
+    def is_reachable(self, force=False):
+        if self.can_connect == None or force == True:
+            self.can_connect = self._is_reachable()
+        return self.can_connect
+
+    def _validate_schema(self, config_json, schema_name):
+        if schema_name == None:
+            return True
+
+        if config_json == None:
+            return False
+
+        try:
+            schema_file = 'resources/schema/%s.json'%schema_name
+            with open(schema_file, "r") as schema_text:
+                schema = json.load(schema_text)
+        except IOError as err:
+            raise MarathonError("%s: schema not found"%err.filename)
+
+        validate(config_json, schema)
+
+    def validate_app_schema(self, config_json):
+        self._validate_schema(config_json, 'AppDefinition')
+
+    def validate_group_schema(self, config_json):
+        self._validate_schema(config_json, 'Group')
